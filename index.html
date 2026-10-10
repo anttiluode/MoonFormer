@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090f18">
+  <title>MoonFormer — read the wake</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="masthead">
+    <a class="brand" href="./"><span class="brand-moon" aria-hidden="true"></span>MOONFORMER <span class="version">FIELD MEMORY · v0.1</span></a>
+    <nav><a href="reference/crystalmoon/">Original CrystalMoon ↗</a><a href="https://github.com/anttiluode/MoonFormer">Code & evidence ↗</a></nav>
+  </header>
+  <main>
+    <section class="intro">
+      <div><p class="eyebrow">A PAST INPUT. A CHANGED MATERIAL. A DIFFERENT ANSWER.</p><h1>Read the wake.</h1><p class="lede">An experience grows crystal. Withdraw the input. Send a pulse.<br>The material remembers through what it does to the signal.</p></div>
+      <div class="protocol-note"><span class="status-dot"></span>LIVE NUMERICAL EXPERIMENT<p>Slow structure · fast waves<br>Four geometric memories · no image generator</p></div>
+    </section>
+
+    <div class="instrument">
+      <aside class="controls panel">
+        <div class="panel-heading"><span>01</span><h2>Leave a trace</h2></div>
+        <p class="small">Choose a teaching input. It will be removed before any reading.</p>
+        <div class="shape-grid" id="shapes" aria-label="Teaching shape">
+          <button class="shape selected" data-shape="arc" aria-pressed="true"><svg viewBox="0 0 100 80" aria-hidden="true"><path d="M22 57 A28 28 0 0 1 78 57"/></svg><span>Arc</span></button>
+          <button class="shape" data-shape="fork" aria-pressed="false"><svg viewBox="0 0 100 80" aria-hidden="true"><path d="M50 69 V40 L25 13 M50 40 L75 13"/></svg><span>Fork</span></button>
+          <button class="shape" data-shape="loop" aria-pressed="false"><svg viewBox="0 0 100 80" aria-hidden="true"><circle cx="50" cy="40" r="27"/></svg><span>Loop</span></button>
+          <button class="shape" data-shape="zigzag" aria-pressed="false"><svg viewBox="0 0 100 80" aria-hidden="true"><path d="M21 15 L40 65 L60 15 L79 65"/></svg><span>Zigzag</span></button>
+        </div>
+        <div class="seed-line"><label for="seed">Episode seed</label><input id="seed" type="number" min="1" max="1000000" value="3001"></div>
+        <button id="teach" class="primary">Write & withdraw <span>↗</span></button>
+        <div class="divider"></div>
+        <div class="panel-heading"><span>02</span><h2>Ask the material</h2></div>
+        <label class="select-label" for="source">Pulse enters from<select id="source"><option value="0">West</option><option value="1">North</option><option value="2">East</option><option value="3">South</option></select></label>
+        <button id="probe" class="outline">Send pulse <span>→</span></button>
+        <button id="wait" class="quiet">Wait 6,000 more field steps</button>
+        <div class="divider"></div>
+        <div class="panel-heading"><span>03</span><h2>Change the memory</h2></div>
+        <div class="button-pair"><button id="erase">Erase all</button><button id="swap" disabled>Swap previous</button></div>
+        <button id="patch" class="quiet" aria-pressed="false">Erase a patch: click the field</button>
+        <label class="check-line"><input id="coupling" type="checkbox" checked>Material affects wave speed</label>
+        <div class="file-actions"><button id="export">Save memory ↓</button><button id="import">Load memory ↑</button></div>
+        <input id="memory-file" type="file" accept=".json,application/json" hidden>
+        <p class="small file-note">Saved memory contains only the numerical field and its physical parameters.</p>
+      </aside>
+
+      <section class="scene panel">
+        <div class="scene-top"><div><p class="eyebrow">THE RETAINED MEDIUM</p><h2 id="scene-title">An input becomes a material</h2></div><span class="live-tag" id="phase">PREPARING</span></div>
+        <div class="view-tabs" aria-label="Field view"><button data-view="signal" class="active" aria-pressed="true">Material + wave</button><button data-view="material" aria-pressed="false">Material</button><button data-view="sensitivity" aria-pressed="false">Jacobian</button></div>
+        <div class="canvas-wrap">
+          <canvas id="field-canvas" width="768" height="768" aria-label="Retained structural field and propagated wave"></canvas>
+          <div class="canvas-coordinate top-left">PERIODIC FIELD <span id="grid-label">32 × 32</span></div>
+          <div class="canvas-coordinate bottom-left" id="view-legend">Crystal density · wave color ×12</div>
+          <div class="canvas-coordinate bottom-right" id="time-label">t = 0.0</div>
+        </div>
+        <div class="scene-meta"><div><span>WRITING INPUT</span><b id="input-status">—</b></div><div><span>UNFORCED STEPS</span><b id="age">—</b></div><div><span>MATERIAL RMS</span><b id="rms">—</b></div><div><span>RAW FORCE RMS</span><b id="force">—</b></div></div>
+        <div class="notice" id="notice" role="status" aria-live="polite">Growing the first trace…</div>
+      </section>
+
+      <aside class="readings">
+        <section class="panel receiver-panel">
+          <div class="panel-heading"><span>04</span><h2>Through the moon</h2></div>
+          <div class="moon-wrap"><canvas id="moon-canvas" width="280" height="280" aria-label="Wave mapped by circle inversion to four receivers"></canvas><span>INVERTED RECEIVER SPACE</span></div>
+          <div class="receiver-controls"><label for="receiver">Receiver<select id="receiver"><option value="0">R1 · east</option><option value="1">R2 · south</option><option value="2">R3 · west</option><option value="3">R4 · north</option></select></label><label for="bin">Time window<select id="bin"><option value="0">0–6.4</option><option value="1">6.4–12.8</option><option value="2" selected>12.8–19.2</option><option value="3">19.2–25.6</option><option value="4">25.6–32.0</option><option value="5">32.0–38.4</option></select></label></div>
+          <canvas id="response-canvas" width="500" height="140" aria-label="Actual receiver time responses"></canvas>
+          <p class="small">The moon resamples the outer wave. Its receivers measure the signal that arrived.</p>
+        </section>
+        <section class="panel readout-panel">
+          <p class="eyebrow">CLOSEST TRAINED FAMILY</p><div id="recognition" class="recognition">Listening…</div><div id="scores" class="score-list"></div>
+          <p id="readout-note" class="small">Readout uses four pulses, four receivers and six time windows. Scores are not probabilities.</p>
+          <div class="truth-note" id="ground-truth">Teaching fixture: arc. Hidden from the reader.</div>
+        </section>
+        <section class="panel jacobian-panel">
+          <p class="eyebrow">WHICH CHANGE WOULD TOUCH THIS ANSWER?</p><h2>Follow the sensitivity.</h2>
+          <p class="small">The Jacobian colors places where a small material change would raise or lower the selected receiver reading.</p>
+          <div class="sensitivity-key"><i class="negative"></i><span>lower</span><span>raise</span><i class="positive"></i></div>
+          <div class="sensitivity-value" id="gradient-value">—</div>
+          <button id="check-gradient" class="outline">Check a small perturbation</button>
+          <p id="gradient-check" class="small">Local sensitivity, not a map of stored meanings.</p>
+        </section>
+      </aside>
+    </div>
+
+    <section class="evidence panel">
+      <div><p class="eyebrow">THE RECEIPT · 32 HELD-OUT EPISODES</p><h2>A mechanism you can challenge.</h2><p>Four known shape families, new noise and geometric variants. All writing input removed for 6,000 steps before reading.</p></div>
+      <div class="result"><strong>25<span>/32</span></strong><span>Wave readout</span></div><div class="result"><strong>25<span>/32</span></strong><span>Direct density readout</span></div><div class="result"><strong>8<span>/32</span></strong><span>Erased or disconnected</span></div>
+      <p class="evidence-foot">The wave reader matches the direct baseline here. This is a small geometric-memory experiment; semantic recall and a benefit from inversion remain unproven. <a href="results/experiment.json">Inspect the full receipt ↗</a></p>
+    </section>
+    <footer><span>MOONFORMER · FROM THE ORIGINAL CRYSTALMOON</span><a href="docs/architecture.md">Equations, approximations & sources ↗</a></footer>
+  </main>
+  <script src="src/field.js"></script><script src="src/moon.js"></script><script src="src/probe.js"></script><script src="src/write.js"></script><script src="src/readout.js"></script><script src="results/model.js"></script><script src="app.js"></script>
+</body>
+</html>

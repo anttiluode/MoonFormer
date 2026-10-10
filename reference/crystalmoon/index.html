@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crystal Moon</title>
+<style>
+  :root { --ink: #e9e4d8; --dim: #8a8f99; --amber: #ffb547; --ice: #8fd8ff; --panel: rgba(10, 13, 18, 0.78); --line: rgba(255, 255, 255, 0.08);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  html, body { margin: 0; height: 100%; background: #020306; overflow: hidden; color: var(--ink); font: 13px/1.45 var(--mono); }
+  canvas#c { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; image-rendering: auto; }
+  .card { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; backdrop-filter: blur(4px); }
+  #hud { left: 16px; top: 16px; min-width: 270px; }
+  #hud .t { color: var(--amber); letter-spacing: .14em; font-size: 11px; display: flex; justify-content: space-between; margin-bottom: 8px; }
+  #hud .t span { color: #556; }
+  .kv { display: flex; justify-content: space-between; gap: 16px; color: var(--dim); }
+  .kv b { color: var(--ink); font-weight: 400; text-align: right; }
+  .kv b.ice { color: var(--ice); }
+  #ctl { left: 16px; bottom: 16px; width: 270px; }
+  #ctl .t { color: var(--ice); letter-spacing: .14em; font-size: 11px; margin-bottom: 8px; }
+  .sl { display: grid; grid-template-columns: 1fr auto; color: var(--dim); margin: 6px 0 2px; }
+  .sl output { color: var(--ink); }
+  input[type=range] { width: 100%; accent-color: var(--amber); margin: 2px 0 4px; }
+  .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  button { font: 11px var(--mono); letter-spacing: .08em; color: var(--ink); background: transparent; border: 1px solid #2a3140; border-radius: 4px; padding: 7px 6px; cursor: pointer; }
+  button:hover { border-color: var(--ice); color: var(--ice); }
+  #keys { right: 16px; bottom: 16px; text-align: right; color: var(--dim); }
+  #keys b { color: var(--amber); font-weight: 400; }
+  #flash { position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity 1.2s; }
+  #flash .l { font-size: 12px; letter-spacing: .4em; color: var(--ice); }
+  #flash .n { font: 300 28px/1.3 system-ui, sans-serif; color: var(--ink); margin-top: 6px; }
+  #start { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(4,6,12,.55), rgba(2,3,6,.92)); cursor: pointer; }
+  #start .box { max-width: 560px; padding: 24px; text-align: center; }
+  #start h1 { margin: 0 0 10px; font: 300 44px/1.1 system-ui, sans-serif; letter-spacing: .06em; }
+  #start h1 span { color: var(--ice); }
+  #start p { color: #aab; font: 15px/1.6 system-ui, sans-serif; margin: 10px 0; }
+  #start .go { margin-top: 20px; color: var(--amber); letter-spacing: .3em; font-size: 12px; }
+  #err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 30px; text-align: center; font: 15px/1.6 system-ui, sans-serif; }
+  .hide .card { display: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud" class="card">
+  <div class="t">CRYSTAL MOON <span id="fps">— fps</span></div>
+  <div class="kv">level <b id="lvl">0</b></div>
+  <div class="kv">law <b id="law" class="ice">—</b></div>
+  <div class="kv">wavelength · clock · lens <b id="nums">—</b></div>
+  <div class="kv">crystal amplitude <b id="amp">—</b></div>
+  <div class="kv">moon <b id="moon">—</b></div>
+</div>
+
+<div id="ctl" class="card">
+  <div class="t">THE LAWS OF THIS LEVEL</div>
+  <div class="sl">lens (light follows density) <output id="kO"></output></div><input type="range" id="k" min="0" max="3" step="0.05">
+  <div class="sl">clock (dense crystal runs slow) <output id="TO"></output></div><input type="range" id="T" min="0" max="8" step="0.1">
+  <div class="sl">surface <output id="isoO"></output></div><input type="range" id="iso" min="-0.6" max="0.8" step="0.01">
+  <div class="sl">time speed <output id="spdO"></output></div><input type="range" id="spd" min="0" max="24" step="1" value="12">
+  <div class="sl">render scale <output id="resO"></output></div><input type="range" id="res" min="0.3" max="1" step="0.05" value="0.5">
+  <div class="btns">
+    <button id="seedBtn">SEED CRYSTAL</button>
+    <button id="meltBtn">MELT LEVEL</button>
+    <button id="homeBtn">FACE THE MOON</button>
+    <button id="hideBtn">HIDE (H)</button>
+  </div>
+</div>
+
+<div id="keys" class="card">
+  <b>W A S D</b> fly · <b>R F</b> up/down · <b>Q E</b> roll · <b>shift</b> fast<br>
+  mouse look (click to capture, Esc to release) · <b>click</b> seed<br>
+  <b>M</b> face the moon · <b>H</b> hide · fly <b>into</b> the moon to go deeper
+</div>
+
+<div id="flash"><div class="l" id="flashL"></div><div class="n" id="flashN"></div></div>
+
+<div id="start">
+  <div class="box">
+    <h1>Crystal <span>Moon</span></h1>
+    <p>A Mexican-hat field condenses into crystal. Where the crystal is dense its clock runs slow, and light bends toward it.</p>
+    <p>The moon is a sphere inversion. Inside it, the infinite world beyond is turned inside out, and its horizon becomes the moon's glowing core. Fly in, and the world inside becomes the world outside.</p>
+    <p>Where you fly, you leave a wake, and crystal grows in it.</p>
+    <div class="go">CLICK TO ENTER</div>
+  </div>
+</div>
+<div id="err"></div>
+
+<script src="core.js"></script>
+<script>
+'use strict';
+const SELFTEST = new URLSearchParams(location.search).has('selftest');
+const canvas = document.getElementById('c');
+const $ = (id) => document.getElementById(id);
+
+function fail(msg) { const e = $('err'); e.style.display = 'flex'; e.textContent = msg; window.__selftest = { error: msg }; throw new Error(msg); }
+const gl = canvas.getContext('webgl2', { antialias: false, preserveDrawingBuffer: SELFTEST, powerPreference: 'high-performance' });
+if (!gl) fail('Crystal Moon needs WebGL2.');
+if (!gl.getExtension('EXT_color_buffer_float')) fail('Crystal Moon needs float render targets (EXT_color_buffer_float).');
+
+const N = 64, TILES = 8, AT = N * TILES, GT = N + 2, GAT = GT * TILES; // sim atlas 512², view atlas 528² (1-texel gutter)
+
+// ================================================================== shaders
+const VS = `#version 300 es
+void main(){ vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2); gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }`;
+
+const SIM_COMMON = `#version 300 es
+precision highp float; precision highp int; precision highp sampler2D;
+uniform sampler2D uSrc;
+ivec2 texOf(ivec3 p){ p = (p % 64 + 64) % 64; return ivec2(p.x + (p.z & 7) * 64, p.y + (p.z >> 3) * 64); }
+ivec3 voxOf(ivec2 t){ return ivec3(t.x & 63, t.y & 63, (t.x >> 6) + (t.y >> 6) * 8); }
+vec4 at(ivec3 p){ return texelFetch(uSrc, texOf(p), 0); }
+float wrap1(float d){ d = mod(abs(d), 64.0); return min(d, 64.0 - d); }
+float wdist(vec3 a, vec3 b){ return length(vec3(wrap1(a.x - b.x), wrap1(a.y - b.y), wrap1(a.z - b.z))); }
+float hash(vec3 p, float s){ p = fract(p * 0.1031 + s * 0.0137); p += dot(p, p.yzx + 33.33); return fract((p.x + p.y) * p.z); }
+`;
+
+// pass 1: (ψ, ∇²ψ, age, trail)
+const FS_LAP = SIM_COMMON + `
+out vec4 o;
+void main(){
+  ivec3 p = voxOf(ivec2(gl_FragCoord.xy));
+  vec4 c = at(p);
+  float l = at(p + ivec3(1,0,0)).r + at(p - ivec3(1,0,0)).r + at(p + ivec3(0,1,0)).r
+          + at(p - ivec3(0,1,0)).r + at(p + ivec3(0,0,1)).r + at(p - ivec3(0,0,1)).r - 6.0 * c.r;
+  o = vec4(c.r, l, c.g, c.b);
+}`;
+
+// pass 2: ψ += dt·M(ψ)·[(ε−q⁴)ψ − 2q²∇²ψ − ∇⁴ψ + gψ² − ψ³]   (identical to Field.step in core.js)
+const FS_UPDATE = SIM_COMMON + `
+uniform float uDt, uQ2, uQ4, uG, uT, uEpsSea, uEpsIsl, uMoonR;
+uniform vec3 uMoonC;
+uniform vec4 uIsl[8];
+uniform vec4 uPoke; uniform float uPokeR, uDecay, uTrailMax, uNoise, uFrame, uAgeDt;
+out vec4 o;
+float epsAt(vec3 x){
+  float m = 0.0;
+  for (int i = 0; i < 8; i++) {
+    if (uIsl[i].w <= 0.0) continue;
+    float d = wdist(x, uIsl[i].xyz);
+    m = max(m, 1.0 - smoothstep(0.6 * uIsl[i].w, uIsl[i].w, d));
+  }
+  m *= smoothstep(uMoonR + 0.5, uMoonR + 3.0, wdist(x, uMoonC));
+  return uEpsSea + (uEpsIsl - uEpsSea) * m;
+}
+void main(){
+  ivec3 p = voxOf(ivec2(gl_FragCoord.xy));
+  vec4 c = at(p);
+  float psi = c.r, lap = c.g, age = c.b, trail = c.a;
+  float l2 = at(p + ivec3(1,0,0)).g + at(p - ivec3(1,0,0)).g + at(p + ivec3(0,1,0)).g
+           + at(p - ivec3(0,1,0)).g + at(p + ivec3(0,0,1)).g + at(p - ivec3(0,0,1)).g - 6.0 * lap;
+  float e = epsAt(vec3(p)) + trail;
+  float f = (e - uQ4) * psi - 2.0 * uQ2 * lap - l2 + uG * psi * psi - psi * psi * psi;
+  float M = 1.0 / (1.0 + uT * psi * psi);
+  float np = psi + uDt * M * f;
+  if (uNoise > 0.0 && e > 0.0) np += uNoise * (hash(vec3(p), uFrame) - 0.5);
+  float tr = trail * uDecay;
+  if (uPoke.w > 0.0) { float d = wdist(vec3(p), uPoke.xyz); tr += uPoke.w * exp(-d * d / (2.0 * uPokeR * uPokeR)); }
+  tr = min(tr, uTrailMax);
+  float ag = abs(np) > 0.3 ? min(age + uAgeDt, 600.0) : age * 0.995;
+  o = vec4(np, ag, tr, 0.0);
+}`;
+
+// seed a world: a faint memory of another world plus noise
+const FS_SEED = SIM_COMMON + `
+uniform float uMix, uAmp, uSeed;
+out vec4 o;
+void main(){
+  ivec3 p = voxOf(ivec2(gl_FragCoord.xy));
+  float prev = uMix > 0.0 ? at(p).r : 0.0;
+  o = vec4(uMix * prev + uAmp * (hash(vec3(p), uSeed) - 0.5), 0.0, 0.0, 0.0);
+}`;
+
+// separable blur of ψ² (mode 0) or of a blurred field (mode 1) → crystal density ρ
+const FS_BLUR = SIM_COMMON + `
+uniform ivec3 uDir; uniform int uMode;
+out vec4 o;
+void main(){
+  ivec3 p = voxOf(ivec2(gl_FragCoord.xy));
+  const float w[5] = float[5](0.1995, 0.1760, 0.1210, 0.0648, 0.0270);
+  float s = 0.0;
+  for (int i = -4; i <= 4; i++) {
+    float v = at(p + i * uDir).r;
+    if (uMode == 0) v = v * v;
+    s += w[abs(i)] * v;
+  }
+  o = vec4(s, 0.0, 0.0, 0.0);
+}`;
+
+// view atlas with a 1-texel gutter so hardware filtering wraps: (ψ, age, ρ) and ∇ρ
+const FS_VIEW = SIM_COMMON + `
+uniform sampler2D uRho;
+layout(location = 0) out vec4 o0;
+layout(location = 1) out vec4 o1;
+float rho(ivec3 p){ return texelFetch(uRho, texOf(p), 0).r; }
+void main(){
+  ivec2 t = ivec2(gl_FragCoord.xy);
+  ivec2 tile = t / 66, loc = t - tile * 66 - 1;
+  ivec3 p = ivec3(loc.x, loc.y, tile.x + tile.y * 8);
+  vec4 s = at(p);
+  float r = rho(p);
+  vec3 g = 0.5 * vec3(rho(p + ivec3(1,0,0)) - rho(p - ivec3(1,0,0)),
+                      rho(p + ivec3(0,1,0)) - rho(p - ivec3(0,1,0)),
+                      rho(p + ivec3(0,0,1)) - rho(p - ivec3(0,0,1)));
+  o0 = vec4(s.r, s.g, r, 0.0);
+  o1 = vec4(g, 0.0);
+}`;
+
+// max |ψ| over 8×8 atlas blocks → 64×64, read back to set the surface level
+const FS_REDUCE = SIM_COMMON + `
+out vec4 o;
+void main(){
+  ivec2 b = ivec2(gl_FragCoord.xy) * 8;
+  float m = 0.0;
+  for (int j = 0; j < 8; j++) for (int i = 0; i < 8; i++) m = max(m, abs(texelFetch(uSrc, b + ivec2(i, j), 0).r));
+  o = vec4(m, 0.0, 0.0, 0.0);
+}`;
+
+// ---------------------------------------------------------------- the renderer
+const FS_RENDER = `#version 300 es
+precision highp float; precision highp sampler2D;
+uniform sampler2D uV1, uV2, uW1;
+uniform vec2 uRes; uniform vec3 uCam; uniform mat3 uRot; uniform float uFov, uTime;
+uniform float uIso, uPol, uKappa, uHue, uAmp;
+uniform float uIsoIn, uPolIn, uHueIn, uAmpIn;
+uniform vec3 uMoonW; uniform float uMoonR;
+uniform int uSteps, uStepsIn;
+out vec4 frag;
+
+vec4 sampleV(sampler2D s, vec3 p){
+  p = mod(p, 64.0);
+  float zf = p.z - 0.5, z0 = floor(zf), f = zf - z0;
+  float za = mod(z0, 64.0), zb = mod(z0 + 1.0, 64.0);
+  vec2 ta = vec2(mod(za, 8.0), floor(za / 8.0)) * 66.0, tb = vec2(mod(zb, 8.0), floor(zb / 8.0)) * 66.0;
+  return mix(texture(s, (ta + p.xy + 1.0) / 528.0), texture(s, (tb + p.xy + 1.0) / 528.0), f);
+}
+vec3 hsv(float h, float s, float v){ vec3 k = clamp(abs(mod(h * 6.0 + vec3(0, 4, 2), 6.0) - 3.0) - 1.0, 0.0, 1.0); return v * mix(vec3(1), k, s); }
+vec3 h33(vec3 p){ p = fract(p * vec3(.1031, .1030, .0973)); p += dot(p, p.yxz + 33.33); return fract((p.xxy + p.yxx) * p.zyx); }
+
+vec3 sky(vec3 d, float hue){
+  vec3 base = mix(vec3(0.004, 0.006, 0.012), hsv(hue + 0.5, 0.6, 0.05), 0.5 + 0.5 * d.y);
+  float neb = 0.5 + 0.5 * sin(d.x * 3.1 + sin(d.y * 4.7 + uTime * 0.02) * 1.3) * sin(d.z * 2.3 + d.y * 1.7);
+  base += hsv(hue + 0.12 * sin(d.x * 2.0), 0.7, 0.035) * neb * neb;
+  vec3 q = d * 160.0, c = floor(q), f = fract(q) - 0.5, h = h33(c);
+  float star = step(0.975, h.x) * smoothstep(0.16, 0.0, length(f - (h - 0.5) * 0.6));
+  base += star * mix(vec3(1.0, 0.85, 0.7), vec3(0.7, 0.85, 1.0), h.y) * (0.6 + 1.6 * h.z);
+  return base;
+}
+vec3 normalAt(sampler2D s, vec3 p, float pol){
+  const float e = 0.6;
+  vec3 g = vec3(sampleV(s, p + vec3(e,0,0)).x - sampleV(s, p - vec3(e,0,0)).x,
+                sampleV(s, p + vec3(0,e,0)).x - sampleV(s, p - vec3(0,e,0)).x,
+                sampleV(s, p + vec3(0,0,e)).x - sampleV(s, p - vec3(0,0,e)).x);
+  return normalize(-pol * g + 1e-6);
+}
+vec3 crystal(vec3 n, vec3 d, float age, float depth, float hue, vec3 where){
+  vec3 L = normalize(vec3(0.5, 0.8, -0.3));
+  float young = exp(-age / 2.5);
+  float vd = abs(dot(n, -d));
+  float fr = pow(1.0 - vd, 3.0);
+  // body colour drifts a little across the crystal; newborn crystal burns ice-white
+  vec3 base = hsv(hue + 0.06 * sin(dot(where, vec3(0.11, 0.07, 0.05))), 0.55 + 0.25 * depth, 0.9);
+  base = mix(base, vec3(0.85, 0.95, 1.0), 0.75 * young);
+  float dif = max(dot(n, L), 0.0), back = max(dot(n, -L), 0.0);
+  vec3 env = sky(reflect(d, n), hue);
+  vec3 col = base * (0.08 + 0.7 * dif + 0.3 * back * depth);
+  col += base * depth * 0.35;                                       // light held inside thick crystal
+  col += hsv(hue + 0.35 * fr + 0.15 * dif, 0.85, 1.0) * fr * 0.9;  // thin-film iridescent rim
+  col += env * 8.0 * fr;
+  col += pow(max(dot(reflect(d, n), L), 0.0), 60.0) * 1.2;
+  col += vec3(0.6, 0.85, 1.0) * young * 1.2;
+  return col;
+}
+
+// inside the moon: march in moon space q; the world seen is w = Φ(q) = c − R²(q−c)/|q−c|²
+vec3 innerView(vec3 q, vec3 d){
+  float R2 = uMoonR * uMoonR, sw = 0.0;
+  vec3 core = hsv(uHueIn, 0.35, 0.95);
+  for (int j = 0; j < 200; j++) {
+    if (j >= uStepsIn) break;
+    vec3 r = q - uMoonW; float r2 = dot(r, r);
+    if (j > 3 && r2 > R2) break;                          // left the moon on the far side
+    vec3 w = uMoonW - R2 * r / r2;
+    vec4 a = sampleV(uW1, w);
+    if (uPolIn * a.x > uIsoIn) {
+      vec3 nw = normalAt(uW1, w, uPolIn);
+      vec3 rh = normalize(r);
+      vec3 nq = normalize(2.0 * dot(rh, nw) * rh - nw);       // half-turn about the radius
+      float depth = clamp(uPolIn * sampleV(uW1, w - nw * 0.8).x / max(uAmpIn, 0.1), 0.0, 1.0);
+      vec3 col = crystal(nq, d, a.y, depth, uHueIn, w);
+      return mix(col, core, 1.0 - exp(-sw * 0.018));
+    }
+    float hw = mix(0.4, 2.2, 1.0 - smoothstep(0.004, 0.06, a.z));
+    q += d * max(hw * r2 / R2, 0.0015);
+    sw += hw;
+  }
+  // the inner world's far distance glows: its infinity sits at the moon's centre
+  return mix(core * 0.22, core, 1.0 - exp(-sw * 0.018));
+}
+
+void main(){
+  vec2 uv = (gl_FragCoord.xy - 0.5 * uRes) / uRes.y;
+  vec3 d = normalize(uRot * vec3(uv * uFov, 1.0));
+  vec3 p = uCam;
+  float t = 0.0, h = 0.4;
+  vec3 col = vec3(0.0), glow = vec3(0.0);
+  bool hit = false;
+  vec3 gcol = hsv(uHue + 0.05, 0.5, 1.0);
+  for (int i = 0; i < 400; i++) {
+    if (i >= uSteps) break;
+    vec3 mr = p - uMoonW;
+    float md = length(mr);
+    if (md < uMoonR) {
+      vec3 n = mr / md;
+      float fr = pow(1.0 - abs(dot(n, -d)), 4.0);
+      vec3 inner = innerView(p, d);
+      vec3 rim = hsv(uHueIn + 0.5, 0.25, 1.0);
+      col = mix(inner, sky(reflect(d, n), uHue) * 3.0 + rim * 0.5, fr * 0.85) + rim * fr * 0.4;
+      col = mix(col, sky(d, uHue), 1.0 - exp(-t * 0.004));
+      hit = true; break;
+    }
+    vec4 a = sampleV(uV1, p);
+    if (t > 1.2 && uPol * a.x > uIso) {
+      vec3 lo = p - d * h, hi = p;
+      for (int k = 0; k < 5; k++) { vec3 m = 0.5 * (lo + hi); if (uPol * sampleV(uV1, m).x > uIso) hi = m; else lo = m; }
+      vec3 n = normalAt(uV1, hi, uPol);
+      float depth = clamp(uPol * sampleV(uV1, hi - n * 0.8).x / max(uAmp, 0.1), 0.0, 1.0);
+      col = crystal(n, d, sampleV(uV1, hi).y, depth, uHue, hi);
+      col = mix(col, sky(d, uHue) * 0.6, 1.0 - exp(-t * 0.012));
+      hit = true; break;
+    }
+    // faint inner light of nearby crystal
+    float gk = smoothstep(uIso * 0.15, uIso, uPol * a.x);
+    glow += gcol * gk * h * 0.012 * exp(-t * 0.02);
+    // step: long strides through empty space, short near crystal and near the moon
+    h = mix(0.35, 2.2, 1.0 - smoothstep(0.004, 0.06, a.z));
+    h = min(h, max(0.25, md - uMoonR + 0.15));
+    // light follows the crystal's clock: n = 1 + κρ, ray equation d(n d̂)/ds = ∇n
+    vec3 gr = uKappa * sampleV(uV2, p).xyz;
+    d = normalize(d + h * (gr - dot(gr, d) * d) / (1.0 + uKappa * a.z));
+    p += d * h; t += h;
+    if (t > 150.0) break;
+  }
+  if (!hit) col = sky(d, uHue);
+  col += glow;
+  col = col / (1.0 + col);                 // gentle tone map
+  col = pow(col, vec3(0.85));
+  frag = vec4(col, 1.0);
+}`;
+
+// ================================================================== GL helpers
+function compile(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) fail('shader: ' + gl.getShaderInfoLog(s));
+  return s;
+}
+function program(fs) {
+  const p = gl.createProgram();
+  gl.attachShader(p, compile(gl.VERTEX_SHADER, VS));
+  gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) fail('link: ' + gl.getProgramInfoLog(p));
+  p.loc = {};
+  return p;
+}
+function tex(w, h, internal, format, type, filter) {
+  const t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texImage2D(gl.TEXTURE_2D, 0, internal, w, h, 0, format, type, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  t.w = w; t.h = h;
+  return t;
+}
+const simTex = () => tex(AT, AT, gl.RGBA32F, gl.RGBA, gl.FLOAT, gl.NEAREST);
+const viewTex = () => tex(GAT, GAT, gl.RGBA16F, gl.RGBA, gl.HALF_FLOAT, gl.LINEAR);
+function fbo(...texs) {
+  const f = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+  texs.forEach((t, i) => gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + i, gl.TEXTURE_2D, t, 0));
+  f.n = texs.length; f.w = texs[0].w; f.h = texs[0].h;
+  if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) fail('framebuffer incomplete');
+  return f;
+}
+const vao = gl.createVertexArray();
+function run(prog, target, uni = {}, texs = {}) {
+  gl.useProgram(prog);
+  if (target) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, target);
+    gl.viewport(0, 0, target.w, target.h);
+    gl.drawBuffers(target.n === 2 ? [gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1] : [gl.COLOR_ATTACHMENT0]);
+  } else {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+  }
+  let unit = 0;
+  for (const [name, t] of Object.entries(texs)) {
+    gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.uniform1i(loc(prog, name), unit++);
+  }
+  for (const [name, v] of Object.entries(uni)) {
+    const l = loc(prog, name);
+    if (l === null) continue;
+    if (typeof v === 'object' && 'int' in v) { Array.isArray(v.int) ? gl['uniform' + v.int.length + 'iv'](l, v.int) : gl.uniform1i(l, v.int); }
+    else if (v.mat3) gl.uniformMatrix3fv(l, false, v.mat3);
+    else if (v.v4a) gl.uniform4fv(l, v.v4a);
+    else if (typeof v === 'number') gl.uniform1f(l, v);
+    else gl['uniform' + v.length + 'fv'](l, v);
+  }
+  gl.bindVertexArray(vao);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+function loc(p, name) { if (!(name in p.loc)) p.loc[name] = gl.getUniformLocation(p, name); return p.loc[name]; }
+
+const P = {
+  lap: program(FS_LAP), update: program(FS_UPDATE), seed: program(FS_SEED), blur: program(FS_BLUR),
+  view: program(FS_VIEW), reduce: program(FS_REDUCE), render: program(FS_RENDER),
+};
+const T1 = simTex(), T2 = simTex(), fT1 = fbo(T1), fT2 = fbo(T2);
+const RED = tex(N, N, gl.RGBA32F, gl.RGBA, gl.FLOAT, gl.NEAREST), fRED = fbo(RED);
+const redBuf = new Float32Array(N * N * 4);
+
+// ================================================================== worlds
+function makeWorld(level) {
+  const w = { level, law: CM.law(level), S: simTex(), L: simTex(), V1: viewTex(), V2: viewTex(), amp: 0.5, frames: 0 };
+  w.fS = fbo(w.S); w.fL = fbo(w.L); w.fV = fbo(w.V1, w.V2);
+  w.isl = new Float32Array(32);
+  w.law.islands.forEach((isl, i) => { w.isl.set([isl.c[0], isl.c[1], isl.c[2], isl.r], 4 * i); });
+  w.kappa = w.law.kappa; w.T = w.law.T; w.isoFrac = w.law.isoFrac;
+  return w;
+}
+function seedWorld(w, from, amp = 0.06) {
+  // seed reads `from.S` and writes w.L, then copies to w.S through a blur-free pass
+  run(P.seed, w.fL, { uMix: from ? 0.25 : 0, uAmp: amp, uSeed: Math.random() * 1000 }, { uSrc: from ? from.S : w.S });
+  run(P.seed, w.fS, { uMix: 1, uAmp: 0, uSeed: 0 }, { uSrc: w.L });
+}
+function stepWorld(w, n, poke, frameDt) {
+  const L = w.law;
+  const q2 = L.q0 * L.q0;
+  for (let s = 0; s < n; s++) {
+    run(P.lap, w.fL, {}, { uSrc: w.S });
+    run(P.update, w.fS, {
+      uDt: L.dt, uQ2: q2, uQ4: q2 * q2, uG: L.g, uT: w.T, uEpsSea: L.epsSea, uEpsIsl: L.epsIsland,
+      uMoonR: CM.MOON.R, uMoonC: CM.MOON.c, uIsl: { v4a: w.isl },
+      uPoke: s === 0 && poke ? poke : [0, 0, 0, 0], uPokeR: 3.5, uDecay: Math.exp(-frameDt / (150 * n)),
+      uTrailMax: 0.8, uNoise: SELFTEST_NOISE ? 0.002 : 0, uFrame: (w.frames * 31 + s) % 997, uAgeDt: frameDt / n,
+    }, { uSrc: w.L });
+  }
+  w.frames++;
+}
+let SELFTEST_NOISE = true;
+function viewWorld(w) {
+  run(P.blur, fT1, { uDir: { int: [1, 0, 0] }, uMode: { int: 0 } }, { uSrc: w.S });
+  run(P.blur, fT2, { uDir: { int: [0, 1, 0] }, uMode: { int: 1 } }, { uSrc: T1 });
+  run(P.blur, fT1, { uDir: { int: [0, 0, 1] }, uMode: { int: 1 } }, { uSrc: T2 });
+  run(P.view, w.fV, {}, { uSrc: w.S, uRho: T1 });
+}
+function measureAmp(w) {
+  run(P.reduce, fRED, {}, { uSrc: w.S });
+  gl.readPixels(0, 0, N, N, gl.RGBA, gl.FLOAT, redBuf);
+  // 99th percentile of block maxima: robust to one stray spike
+  const m = [];
+  for (let i = 0; i < N * N; i++) m.push(redBuf[4 * i]);
+  m.sort((a, b) => a - b);
+  const v = m[Math.floor(0.99 * (m.length - 1))];
+  w.amp = w.amp * 0.6 + v * 0.4;
+  return v;
+}
+
+// ================================================================== camera
+const cam = { p: [32.5, 32.5, 0.5], q: [0, 0, 0, 1], v: [0, 0, 0] };
+function qmul(a, b) {
+  return [a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1], a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0],
+    a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3], a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]];
+}
+function qaxis(ax, ang) { const s = Math.sin(ang / 2); return [ax[0] * s, ax[1] * s, ax[2] * s, Math.cos(ang / 2)]; }
+function qnorm(q) { const n = Math.hypot(...q); return q.map((v) => v / n); }
+function qrot(q, v) {
+  const [x, y, z, w] = q;
+  const ix = w * v[0] + y * v[2] - z * v[1], iy = w * v[1] + z * v[0] - x * v[2], iz = w * v[2] + x * v[1] - y * v[0], iw = -x * v[0] - y * v[1] - z * v[2];
+  return [ix * w + iw * -x + iy * -z - iz * -y, iy * w + iw * -y + iz * -x - ix * -z, iz * w + iw * -z + ix * -y - iy * -x];
+}
+const right = () => qrot(cam.q, [1, 0, 0]), up = () => qrot(cam.q, [0, 1, 0]), fwd = () => qrot(cam.q, [0, 0, 1]);
+function turn(axisLocal, ang) { cam.q = qnorm(qmul(cam.q, qaxis(axisLocal, ang))); }
+function faceMoon() {
+  const m = [CM.MOON.c[0] + 0.5, CM.MOON.c[1] + 0.5, CM.MOON.c[2] + 0.5];
+  const f = fwd(), to = norm3(sub3(m, cam.p));
+  const ax = cross3(f, to), s = Math.hypot(...ax), c = dot3(f, to);
+  if (s < 1e-6) return;
+  cam.q = qnorm(qmul(qaxis(ax.map((v) => v / s), Math.atan2(s, c)), cam.q));
+}
+const sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const norm3 = (a) => { const n = Math.hypot(...a) || 1; return a.map((v) => v / n); };
+
+const keys = new Set();
+addEventListener('keydown', (e) => {
+  keys.add(e.code);
+  if (e.code === 'KeyH') document.body.classList.toggle('hide');
+  if (e.code === 'KeyM') faceMoon();
+});
+addEventListener('keyup', (e) => keys.delete(e.code));
+let locked = false, dragging = false;
+document.addEventListener('pointerlockchange', () => { locked = document.pointerLockElement === canvas; });
+canvas.addEventListener('mousedown', (e) => {
+  if (locked) { seedAhead(); return; }
+  dragging = true;
+  if (canvas.requestPointerLock) canvas.requestPointerLock();
+});
+addEventListener('mouseup', () => { dragging = false; });
+addEventListener('mousemove', (e) => {
+  if (!locked && !dragging) return;
+  turn([0, 1, 0], e.movementX * 0.0022);
+  turn([1, 0, 0], e.movementY * 0.0022);
+});
+$('start').addEventListener('click', () => {
+  $('start').style.display = 'none';
+  if (canvas.requestPointerLock) canvas.requestPointerLock();
+});
+
+// ================================================================== the levels
+let outer, inner;
+function law2ui(w) {
+  $('lvl').textContent = w.level;
+  $('law').textContent = w.law.name.split(' · ')[0];
+  $('nums').textContent = `${w.law.lambda.toFixed(1)} · ${w.T.toFixed(1)} · ${w.kappa.toFixed(2)}`;
+  $('k').value = w.kappa; $('T').value = w.T; $('iso').value = w.isoFrac;
+  ['k', 'T', 'iso'].forEach((id) => $(id).dispatchEvent(new Event('input')));
+}
+function flash(top, name) {
+  $('flashL').textContent = top; $('flashN').textContent = name;
+  const f = $('flash'); f.style.opacity = 1;
+  clearTimeout(flash.t); flash.t = setTimeout(() => { f.style.opacity = 0; }, 3500);
+}
+function enterMoon() {
+  // camera: x ↦ Φ(x), frame turned a half-turn about the radius
+  const c = [CM.MOON.c[0] + 0.5, CM.MOON.c[1] + 0.5, CM.MOON.c[2] + 0.5];
+  const r = sub3(cam.p, c), rr = Math.hypot(...r), rh = r.map((v) => v / rr);
+  const pw = CM.portal(cam.p, c, CM.MOON.R);
+  const out = norm3(sub3(pw, c));
+  cam.p = [pw[0] + out[0] * 0.6, pw[1] + out[1] * 0.6, pw[2] + out[2] * 0.6];
+  const half = [rh[0], rh[1], rh[2], 0];               // quaternion of a half-turn about r̂
+  cam.q = qnorm(qmul(half, cam.q));
+  const vr = dot3(cam.v, rh);
+  cam.v = cam.v.map((v, i) => 2 * vr * rh[i] - v);     // velocity: same half-turn
+  // the world inside becomes the world outside; a new world starts growing in the moon
+  const old = outer;
+  outer = inner;
+  inner = old;
+  inner.level = outer.level + 1; inner.law = CM.law(inner.level);
+  inner.isl.fill(0); inner.law.islands.forEach((isl, i) => inner.isl.set([isl.c[0], isl.c[1], isl.c[2], isl.r], 4 * i));
+  inner.kappa = inner.law.kappa; inner.T = inner.law.T; inner.isoFrac = inner.law.isoFrac; inner.amp = 0.5; inner.frames = 0;
+  seedWorld(inner, outer);
+  law2ui(outer);
+  flash(`LEVEL ${outer.level}`, outer.law.name.split(' · ')[0]);
+}
+
+// ================================================================== UI
+function bind(id, fmt, set) {
+  const el = $(id), o = $(id + 'O');
+  el.addEventListener('input', () => { o.textContent = fmt(+el.value); set && set(+el.value); });
+  o.textContent = fmt(+el.value);
+}
+bind('k', (v) => v.toFixed(2), (v) => { if (outer) outer.kappa = v; });
+bind('T', (v) => v.toFixed(1), (v) => { if (outer) outer.T = v; });
+bind('iso', (v) => (v > 0 ? 'atoms ' : 'foam ') + v.toFixed(2), (v) => { if (outer) outer.isoFrac = Math.abs(v) < 0.03 ? 0.03 : v; });
+bind('spd', (v) => v + ' steps');
+bind('res', (v) => Math.round(v * 100) + '%', () => resize());
+$('seedBtn').onclick = () => seedAhead();
+$('meltBtn').onclick = () => { seedWorld(outer, null); flash(`LEVEL ${outer.level}`, 'melted — it will grow again'); };
+$('homeBtn').onclick = () => faceMoon();
+$('hideBtn').onclick = () => document.body.classList.toggle('hide');
+let pendingSeed = null;
+function seedAhead() {
+  const f = fwd();
+  pendingSeed = [cam.p[0] + f[0] * 7, cam.p[1] + f[1] * 7, cam.p[2] + f[2] * 7];
+}
+
+function resize() {
+  const s = SELFTEST ? 1 : +$('res').value;
+  const w = Math.max(64, Math.round(innerWidth * s)), h = Math.max(48, Math.round(innerHeight * s));
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+}
+addEventListener('resize', resize);
+
+// ================================================================== main loop
+let last = performance.now(), fpsN = 0, fpsT = 0, frame = 0;
+function tick(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  frame++;
+  // fly
+  const boost = keys.has('ShiftLeft') || keys.has('ShiftRight') ? 4 : 1;
+  const acc = [0, 0, 0];
+  const add = (v, s) => { acc[0] += v[0] * s; acc[1] += v[1] * s; acc[2] += v[2] * s; };
+  if (keys.has('KeyW') || keys.has('ArrowUp')) add(fwd(), 1);
+  if (keys.has('KeyS') || keys.has('ArrowDown')) add(fwd(), -1);
+  if (keys.has('KeyD') || keys.has('ArrowRight')) add(right(), 1);
+  if (keys.has('KeyA') || keys.has('ArrowLeft')) add(right(), -1);
+  if (keys.has('KeyR') || keys.has('Space')) add(up(), 1);
+  if (keys.has('KeyF') || keys.has('KeyC')) add(up(), -1);
+  if (keys.has('KeyQ')) turn([0, 0, 1], 1.4 * dt);
+  if (keys.has('KeyE')) turn([0, 0, 1], -1.4 * dt);
+  const speed = 7 * boost;
+  for (let i = 0; i < 3; i++) cam.v[i] += (acc[i] * speed - cam.v[i]) * Math.min(1, dt * 4);
+  const prev = cam.p.slice();
+  for (let i = 0; i < 3; i++) cam.p[i] += cam.v[i] * dt;
+  const mc = [CM.MOON.c[0] + 0.5, CM.MOON.c[1] + 0.5, CM.MOON.c[2] + 0.5];
+  const dPrev = Math.hypot(...sub3(prev, mc)), dNow = Math.hypot(...sub3(cam.p, mc));
+  if (dPrev >= CM.MOON.R && dNow < CM.MOON.R) enterMoon();
+
+  // the wake: crystal grows behind you while you move
+  const sp = Math.hypot(...cam.v);
+  let poke = null;
+  if (pendingSeed) { poke = [...pendingSeed.map((v) => ((v - 0.5) % 64 + 64) % 64), 1.2]; pendingSeed = null; }
+  else if (sp > 1) {
+    const f = fwd(), b = [cam.p[0] - f[0] * 5, cam.p[1] - f[1] * 5, cam.p[2] - f[2] * 5];
+    poke = [...b.map((v) => ((v - 0.5) % 64 + 64) % 64), Math.min(0.08, 0.012 * sp)];
+  }
+
+  const steps = +$('spd').value;
+  stepWorld(outer, steps, poke, dt);
+  stepWorld(inner, Math.ceil(steps * 0.6), null, dt);
+  viewWorld(outer);
+  if (frame % 2 === 0) viewWorld(inner);
+  if (frame % 20 === 1) measureAmp(outer);
+  if (frame % 20 === 11) measureAmp(inner);
+
+  // render
+  resize();
+  const R = right(), U = up(), F = fwd();
+  const isoOf = (w) => Math.abs(w.isoFrac) * Math.max(w.amp, 0.45);
+  run(P.render, null, {
+    uRes: [canvas.width, canvas.height], uCam: cam.p, uRot: { mat3: [...R, ...U, ...F] }, uFov: 1.0, uTime: now / 1000,
+    uIso: isoOf(outer), uPol: Math.sign(outer.isoFrac), uKappa: outer.kappa, uHue: outer.law.hue, uAmp: outer.amp,
+    uIsoIn: isoOf(inner), uPolIn: Math.sign(inner.isoFrac), uHueIn: inner.law.hue, uAmpIn: inner.amp,
+    uMoonW: mc, uMoonR: CM.MOON.R, uSteps: { int: 150 }, uStepsIn: { int: 110 },
+  }, { uV1: outer.V1, uV2: outer.V2, uW1: inner.V1 });
+
+  // HUD
+  fpsN++; fpsT += dt;
+  if (fpsT > 0.5) { $('fps').textContent = Math.round(fpsN / fpsT) + ' fps'; fpsN = 0; fpsT = 0; }
+  $('amp').textContent = outer.amp.toFixed(2);
+  $('moon').textContent = `${Math.max(0, dNow - CM.MOON.R).toFixed(0)} away · level ${inner.level} inside`;
+  if (!SELFTEST) requestAnimationFrame(tick);
+}
+
+// ================================================================== start
+function start() {
+  outer = makeWorld(0); inner = makeWorld(1);
+  seedWorld(outer, null); seedWorld(inner, null);
+  law2ui(outer);
+  resize();
+  if (!SELFTEST) {
+    flash('LEVEL 0', outer.law.name.split(' · ')[0]);
+    requestAnimationFrame((t) => { last = t; tick(t); });
+  }
+}
+start();
+
+// ================================================================== selftest (?selftest)
+// The GPU field must equal the CPU reference in core.js, step for step.
+if (SELFTEST) {
+  $('start').style.display = 'none';
+  window.__run = (frames) => { for (let i = 0; i < frames; i++) tick(last + 16.7); return true; };
+  window.__grow = (n, which = 3) => { const t0 = performance.now(); if (which & 1) stepWorld(outer, n, null, 0.016); if (which & 2) stepWorld(inner, n, null, 0.016); viewWorld(outer); viewWorld(inner); measureAmp(outer); measureAmp(inner); measureAmp(outer); measureAmp(inner); gl.finish(); return performance.now() - t0; };
+  window.__cam = (p) => { cam.p = p; cam.v = [0, 0, 0]; faceMoon(); return true; };
+  window.__enter = () => { enterMoon(); return { level: outer.level, inner: inner.level, cam: cam.p }; };
+  window.__seedBig = (a) => { seedWorld(outer, null, a); seedWorld(inner, null, a); return true; };
+  window.__state = () => ({ ampOuter: outer.amp, ampInner: inner.amp, level: outer.level });
+  window.__selftest = (() => {
+    SELFTEST_NOISE = false;
+    const w = outer, L = w.law;
+    const f = new CM.Field(L, N);
+    f.seedNoise(0.3, 42);
+    const up = new Float32Array(AT * AT * 4);
+    for (let z = 0; z < N; z++) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const tx = x + (z & 7) * N, ty = y + (z >> 3) * N;
+      up[4 * (ty * AT + tx)] = f.psi[f.idx(x, y, z)];
+    }
+    gl.bindTexture(gl.TEXTURE_2D, w.S);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, AT, AT, gl.RGBA, gl.FLOAT, up);
+    const K = 25;
+    stepWorld(w, K, null, 0.016);
+    for (let k = 0; k < K; k++) f.step();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, w.fS);
+    const back = new Float32Array(AT * AT * 4);
+    gl.readPixels(0, 0, AT, AT, gl.RGBA, gl.FLOAT, back);
+    let maxDiff = 0, maxAbs = 0;
+    for (let z = 0; z < N; z++) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const tx = x + (z & 7) * N, ty = y + (z >> 3) * N;
+      const g = back[4 * (ty * AT + tx)], c = f.psi[f.idx(x, y, z)];
+      maxDiff = Math.max(maxDiff, Math.abs(g - c)); maxAbs = Math.max(maxAbs, Math.abs(c));
+    }
+    SELFTEST_NOISE = true;
+    seedWorld(outer, null); seedWorld(inner, null);
+    return { maxDiff, maxAbs, steps: K, ok: maxDiff < 1e-4 * Math.max(1, maxAbs), glError: gl.getError() };
+  })();
+}
+</script>
+</body>
+</html>
